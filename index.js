@@ -1,13 +1,11 @@
 
-var idx = 0;
-
 var img = new Image(); 
 img.addEventListener('load', function() {
   canvas.width = img.width;
   canvas.height = img.height;
   ctx.drawImage(img, 0,0);
 }, false);
-img.src = getImageSource(idx);
+
 
 
 //Canvas
@@ -21,27 +19,43 @@ var last_mousex = last_mousey = 0;
 var mousex = mousey = 0;
 var mousedown = false;
 
-function getImageSource(imgidx) {
-	return apiBaseUrl + '?idx=' + imgidx;
+var idx = 0;
+var imgkey = 0;
+
+
+function updateImage(idx){
+	$.get(apiBaseUrl + '?getkey&idx=' + idx, function(key){
+		imgkey = key;
+		img.src = apiBaseUrl + '?getimg&key=' + imgkey;
+	});
 }
+
 
 function nextImage() {
 
 	idx += 1;
-	img.src = getImageSource(idx);
+	updateImage(idx);
 
 }
 
 function prevImage() {
 
 	idx -=1;
-	img.src = getImageSource(idx);
+	updateImage(idx);
+}
+
+function deleteImage() {
+// tell lambda to delete img
+	$.get(apiBaseUrl + '?delete&key=' + imgkey, function(){ updateImage(idx); });
+	
 }
 
 function init() {
 
 	$('#next-button').click(nextImage);
 	$('#prev-button').click(prevImage);
+	$('#delete-button').click(deleteImage);
+	updateImage(idx);
 }
 
 $(init);
