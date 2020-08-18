@@ -1,6 +1,7 @@
 
 var img = new Image(); 
-img.addEventListener('load', function() {
+img.addEventListener('load', function()
+{
   canvas.width = img.width;
   canvas.height = img.height;
   ctx.drawImage(img, 0,0);
@@ -18,44 +19,55 @@ var canvasy = $(canvas).offset().top;
 var last_mousex = last_mousey = 0;
 var mousex = mousey = 0;
 var mousedown = false;
-
-var idx = 0;
+//Indices
+var previdx = 0;
+var curridx = 0;
+var nextidx = 0;
 var imgkey = 0;
 
 
-function updateImage(idx){
-	$.get(apiBaseUrl + '?getkey&idx=' + idx, function(key){
-		imgkey = key;
+function updateImage(idx)
+{
+    $.getJSON(apiBaseUrl + '?getkey&idx=' + idx, function(response)
+    {
+        imgkey = response['currkey'];
+        previdx = response['previdx'];
+        nextidx = response['nextidx'];
+        
 		img.src = apiBaseUrl + '?getimg&key=' + imgkey;
 	});
 }
 
 
-function nextImage() {
-
-	idx += 1;
-	updateImage(idx);
-
+function nextImage() 
+{
+	curridx = nextidx;
+	updateImage(curridx);
 }
 
-function prevImage() {
-
-	idx -=1;
-	updateImage(idx);
+function prevImage() 
+{
+	curridx = previdx;
+	updateImage(curridx);
 }
 
-function deleteImage() {
+function deleteImage() 
+{
 // tell lambda to delete img
-	$.get(apiBaseUrl + '?delete&key=' + imgkey, function(){ updateImage(idx); });
+    $.get(apiBaseUrl + '?delete&key=' + imgkey, function()
+    { 
+        nextImage();
+    });
 	
 }
 
-function init() {
+function init() 
+{
 
 	$('#next-button').click(nextImage);
 	$('#prev-button').click(prevImage);
 	$('#delete-button').click(deleteImage);
-	updateImage(idx);
+	updateImage(curridx);
 }
 
 $(init);
@@ -64,22 +76,26 @@ $(init);
 
 
 //Mousedown
-$(canvas).on('mousedown', function(e) {
+$(canvas).on('mousedown', function(e) 
+{
     last_mousex = parseInt(e.clientX-canvasx);
 	last_mousey = parseInt(e.clientY-canvasy);
     mousedown = true;
 });
 
 //Mouseup
-$(canvas).on('mouseup', function(e) {
+$(canvas).on('mouseup', function(e) 
+{
     mousedown = false;
 });
 
 //Mousemove
-$(canvas).on('mousemove', function(e) {
+$(canvas).on('mousemove', function(e) 
+{
     mousex = parseInt(e.clientX-canvasx);
 	mousey = parseInt(e.clientY-canvasy);
-    if(mousedown) {
+    if(mousedown) 
+    {
         ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
         ctx.drawImage(img,0,0);
         ctx.beginPath();
