@@ -7,18 +7,47 @@ img.addEventListener('load', function()
   ctx.drawImage(img, 0,0);
 }, false);
 
+class Label {
+    constructor(canvas, xi,yi) {
+        this.xi = this.xf = xi;
+        this.yi = this.yf = yi;
 
+        this.labelinput = $('<input type="text" />');
+        this.labelinput.css('position','absolute');
+        this.labelinput.css('left',this.xi);
+        this.labelinput.css('top',this.yi - 40);
+        $(canvas.parentElement).append(this.labelinput)
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        var width = this.xf-this.xi;
+        var height = this.yf-this.yi;
+        ctx.rect(this.xi,this.yi,width,height);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        
+        // ctx.font = "15px Arial";
+        // ctx.fillText("Hello World", Math.min(mousex, last_mousex), Math.min(mousey, last_mousey)-4); 
+
+    }
+
+}
 
 //Canvas
 var canvas = document.getElementById('main-canvas');
 var ctx = canvas.getContext('2d');
-
+//Labels
+var labels = {};
+currlabel = 0;
 //Variables
 var canvasx = $(canvas).offset().left;
 var canvasy = $(canvas).offset().top;
 var last_mousex = last_mousey = 0;
 var mousex = mousey = 0;
-var mousedown = false;
+var editbox = false;
 //Indices
 var previdx = 0;
 var curridx = 0;
@@ -54,6 +83,7 @@ function prevImage()
 function deleteImage() 
 {
 // tell lambda to delete img
+    
     $.get(apiBaseUrl + '?delete&key=' + imgkey, function()
     { 
         nextImage();
@@ -78,15 +108,15 @@ $(init);
 //Mousedown
 $(canvas).on('mousedown', function(e) 
 {
-    last_mousex = parseInt(e.clientX-canvasx);
-	last_mousey = parseInt(e.clientY-canvasy);
-    mousedown = true;
-});
-
-//Mouseup
-$(canvas).on('mouseup', function(e) 
-{
-    mousedown = false;
+    x = parseInt(e.clientX-canvasx);
+    y = parseInt(e.clientY-canvasy);
+    if (editbox == false) {
+        labels.push(new Label(canvas, x, y));
+    }
+    else {
+        label
+    }
+    editbox = !editbox;
 });
 
 //Mousemove
@@ -94,18 +124,15 @@ $(canvas).on('mousemove', function(e)
 {
     mousex = parseInt(e.clientX-canvasx);
 	mousey = parseInt(e.clientY-canvasy);
-    if(mousedown) 
+    if(editbox) 
     {
         ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
         ctx.drawImage(img,0,0);
-        ctx.beginPath();
-        var width = mousex-last_mousex;
-        var height = mousey-last_mousey;
-        ctx.rect(last_mousex,last_mousey,width,height);
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 4;
-        ctx.stroke();
+        for (label in labels) {
+            label.draw(ctx);
+        }
+
+        
     }
-    //Output
-    $('#output').html('current: '+mousex+', '+mousey+'<br/>last: '+last_mousex+', '+last_mousey+'<br/>mousedown: '+mousedown);
+
 });
