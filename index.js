@@ -1,16 +1,19 @@
 
 var img = new Image(); 
-img.addEventListener('load', function()
-{
-  canvas.width = img.width;
-  canvas.height = img.height;
-  ctx.drawImage(img, 0,0);
-}, false);
+
+img.addEventListener('load', loadListener, false);
+
+var previmg = null;
+var nextimg = null;
 
 class Label {
+    
+    static nextLabelId = 0;
+
     constructor(canvas, xi,yi) {
         this.xi = this.xf = xi;
         this.yi = this.yf = yi;
+        this.id = Label.nextLabelId++;
 
         this.labelinput = $('<input type="text" />');
         this.labelinput.css('position','absolute');
@@ -27,11 +30,6 @@ class Label {
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 4;
         ctx.stroke();
-
-        
-        // ctx.font = "15px Arial";
-        // ctx.fillText("Hello World", Math.min(mousex, last_mousex), Math.min(mousey, last_mousey)-4); 
-
     }
 
 }
@@ -41,12 +39,10 @@ var canvas = document.getElementById('main-canvas');
 var ctx = canvas.getContext('2d');
 //Labels
 var labels = {};
-currlabel = 0;
+currlabel = null;
 //Variables
 var canvasx = $(canvas).offset().left;
 var canvasy = $(canvas).offset().top;
-var last_mousex = last_mousey = 0;
-var mousex = mousey = 0;
 var editbox = false;
 //Indices
 var previdx = 0;
@@ -54,30 +50,72 @@ var curridx = 0;
 var nextidx = 0;
 var imgkey = 0;
 
+function loadListener()
+{
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0,0);
+    deleteAllLabels();
+}
 
-function updateImage(idx)
+
+function updateImage(idx, useCached=false)
 {
     $.getJSON(apiBaseUrl + '?getkey&idx=' + idx, function(response)
     {
         imgkey = response['currkey'];
         previdx = response['previdx'];
         nextidx = response['nextidx'];
-        
-		img.src = apiBaseUrl + '?getimg&key=' + imgkey;
-	});
+
+        if (!useCached) {
+            img.src = apiBaseUrl + '?getimg&key=' + imgkey;
+        }
+    });
+    
 }
 
+function deleteAllLabels() {
+
+    for (id in labels) {
+        // delete labels[id]
+        labels[id].labelinput.remove();
+    }
+    labels = {};
+    ctx.drawImage(img,0,0);
+}
 
 function nextImage() 
 {
-	curridx = nextidx;
-	updateImage(curridx);
+    previmg = img.cloneNode();
+    curridx = nextidx;
+    var useCached = (nextimg != null);
+    if  (useCached) {
+        deleteAllLabels();
+
+        img = nextimg;
+        img.addEventListener('load', loadListener, false);
+        ctx.drawImage(img,0,0);   
+    }
+    
+    updateImage(curridx, useCached);
+    
+	nextimg = null;
 }
 
 function prevImage() 
 {
-	curridx = previdx;
-	updateImage(curridx);
+    nextimg = img.cloneNode();
+    curridx = previdx;
+    var useCached = (previmg != null);
+    if (useCached) {
+        deleteAllLabels();
+
+        img = previmg;
+        img.addEventListener('load', loadListener, false);
+        ctx.drawImage(img,0,0); 
+    }       
+    updateImage(curridx, useCached);
+	previmg = null;
 }
 
 function deleteImage() 
@@ -111,10 +149,15 @@ $(canvas).on('mousedown', function(e)
     x = parseInt(e.clientX-canvasx);
     y = parseInt(e.clientY-canvasy);
     if (editbox == false) {
-        labels.push(new Label(canvas, x, y));
+        currlabel = new Label(canvas, x, y);
+        labels[currlabel.id] = currlabel;
+
     }
     else {
-        label
+        //give label xf and yf.
+        // labels[]
+        currlabel.xf = x;
+        currlabel.yf = y;
     }
     editbox = !editbox;
 });
@@ -122,16 +165,15 @@ $(canvas).on('mousedown', function(e)
 //Mousemove
 $(canvas).on('mousemove', function(e) 
 {
-    mousex = parseInt(e.clientX-canvasx);
-	mousey = parseInt(e.clientY-canvasy);
     if(editbox) 
     {
+        currlabel.xf = parseInt(e.clientX-canvasx);
+        currlabel.yf = parseInt(e.clientY-canvasy);
         ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
         ctx.drawImage(img,0,0);
-        for (label in labels) {
-            label.draw(ctx);
+        for (id in labels) {
+            labels[id].draw(ctx);
         }
-
         
     }
 
