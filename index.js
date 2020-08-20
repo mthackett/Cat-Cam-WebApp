@@ -14,8 +14,8 @@ class Label {
         this.id = Label.nextLabelId++;
         this.labelIndex = imgidx;
 
-        this.xi = this.xf = this.midx = xi;
-        this.yi = this.yf = this.midy = yi;
+        this.xi = this.xf = xi;
+        this.yi = this.yf = yi;
         this.width = this.height = 0;
 
         this.labelInput = $('<input type="text" />');
@@ -40,8 +40,19 @@ class Label {
 
         this.labelWidth = this.width / img.width;
         this.labelHeight = this.height / img.height;
-        this.labelX = (this.xi + this.xf) / 2;
-        this.labelY = (this.yi + this.yf) / 2;
+        this.labelX = (this.xi + this.xf) / (2 * img.width);
+        this.labelY = (this.yi + this.yf) / (2 * img.height);
+    }
+    
+    getData() {
+        return {
+            "labelX": this.labelX,
+            "labelY": this.labelY,
+            "labelText": this.labelInput.val(),
+            "labelWidth": this.labelWidth,
+            "labelHeight": this.labelHeight
+        }
+
     }
 }
 
@@ -52,9 +63,9 @@ var ctx = canvas.getContext('2d');
 var labels = [];
 var currLabel = null;
 var classLookup = {};
-//Variables
-var canvasX = $(canvas).offset().left;
+//Variables}
 var canvasY = $(canvas).offset().top;
+var canvasX = $(canvas).offset().left;
 var editBox = false;
 //Indices
 var prevIdx = 0;
@@ -79,9 +90,10 @@ function updateImage(idx, useCached=false)
         prevIdx = response['previdx'];
         nextIdx = response['nextidx'];
 
-        if (!useCached) {
-            img.src = apiBaseUrl + '?getimg&key=' + imgKey;
-        }
+        img.src = apiBaseUrl + '?getimg&key=' + imgKey;
+        // if (!useCached) {
+        //     img.src = apiBaseUrl + '?getimg&key=' + imgKey;
+        // }
     });
     
 }
@@ -149,7 +161,26 @@ function deleteImage()
 
 function saveLabels() 
 {
-    $.post(apiBaseUrl + '?savelabels&idx=' + currIdx, JSON.stringify(labels, ['labelText','labelX','labelY','normalizedWidth','normalizedHeight']), nextImage, 'json');
+    var labelData = [];
+    for (label of labels) {
+        labelData.push(label.getData());
+    }
+    var payload = 
+    {
+        "action": "savelabels",
+        "idx": currIdx,
+        "labels": labelData
+    };
+
+    $.ajax({
+        type: "POST",
+        url: apiBaseUrl,
+        contentType: "application/json",
+        data: JSON.stringify(payload)
+    }).done(function(){
+        nextImage();
+        prevImg = null; 
+    });
 }
 
 function init() 
@@ -180,7 +211,6 @@ $(canvas).on('mousedown', function(e)
         currLabel.xf = x;
         currLabel.yf = y;
         currLabel.calculateCoords();
-        currLabel.labelText = currLabel.labelInput.val();
     }
     editBox = !editBox;
 });
