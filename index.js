@@ -1,17 +1,11 @@
 
-var img = new Image(); 
-
-img.addEventListener('load', loadListener, false);
-
-var prevImg = null;
-var nextImg = null;
-
+/**   
+ * Contains a bounding box and an HTML input element
+ * for classifying objects in images.
+ */
 class Label {
-    // Training label class defining a box with a classification label.
-    static nextLabelId = 0;
 
     constructor(canvas, imgidx, xi,yi) {
-        this.id = Label.nextLabelId++;
         this.labelIndex = imgidx;
 
         this.xi = this.xf = xi;
@@ -44,6 +38,10 @@ class Label {
         this.labelY = (this.yi + this.yf) / (2 * img.height);
     }
     
+    /**
+     * Returns an object containing YOLO-style properties 
+     * of the bounding box and its corresponding label.
+     */
     getData() {
         return {
             "labelX": this.labelX,
@@ -56,6 +54,20 @@ class Label {
     }
 }
 
+// Main image
+var img = new Image(); 
+
+// Cached images
+var prevImg = null;
+var nextImg = null;
+
+//Indices and keys for the main and cached images
+imgMetadata = {
+    'prev': {'idx': 0, 'key': ''},
+    'curr': {'idx': 0, 'key': ''},
+    'next': {'idx': 0, 'key': ''}
+};
+
 //Canvas
 var canvas = document.getElementById('main-canvas');
 var ctx = canvas.getContext('2d');
@@ -63,14 +75,14 @@ var ctx = canvas.getContext('2d');
 var labels = [];
 var currLabel = null;
 var classLookup = {};
-//Variables}
+//Variables
 var canvasY = $(canvas).offset().top;
 var canvasX = $(canvas).offset().left;
 var editBox = false;
-//Indices and Keys
-imgMetadata = {};
 
-
+/**
+ * Called whenever the main image finishes loading
+ */
 function loadListener()
 {
     canvas.width = img.width;
@@ -79,7 +91,12 @@ function loadListener()
     deleteAllLabels();
 }
 
-
+/**
+ * Updates imgMetadata and loads the image corresponding to the provided image index
+ * 
+ * @param {number} idx          The index of the image to load
+ * @param {boolean} useCached   When true, updateImage will only update the image metadata
+ */
 function updateImage(idx, useCached=false)
 {
     $.getJSON(apiBaseUrl + '?getkey&idx=' + idx, function(response)
@@ -93,9 +110,12 @@ function updateImage(idx, useCached=false)
     
 }
 
+/**
+ * Retrieves the available class labels from the server and
+ * creates a mapping from each class name to its label index
+ */
 function getClasses() 
 {
-
     $.get(apiBaseUrl + '?getclasses', function(response) {
             for (keyValPair of JSON.parse(response)) {
                 classLookup[keyValPair['class']] = keyValPair['index'];
@@ -151,10 +171,15 @@ function prevImage()
 	prevImg = null;
 }
 
-function deleteImage() //////////// useCached needs to be updated in the case of deleted images.
+/**
+ * Permanently deletes the currently displayed image from the database.
+ */
+function deleteImage() 
 {
-    // tell lambda to delete img
-    $.get(apiBaseUrl + '?delete&key=' + imgMetadata['curr']['key'], nextImage);
+    $.get(apiBaseUrl + '?delete&key=' + imgMetadata['curr']['key'], function() {
+        nextImage();
+        prevImg = null;
+    });
 }
 
 function saveLabels() 
@@ -181,22 +206,9 @@ function saveLabels()
     });
 }
 
-function init() 
-{
+////////////////////////////// Canvas Drawing //////////////////////////////
 
-	$('#next-button').click(nextImage);
-	$('#prev-button').click(prevImage);
-    $('#delete-button').click(deleteImage);
-    $('#save-button').click(saveLabels);
-
-    imgMetadata['curr'] = {'idx': 0};
-	updateImage(0);
-}
-
-$(init);
-
-
-//Mousedown
+// Handles the creation/finalization of Label objects
 $(canvas).on('mousedown', function(e) 
 {
     x = parseInt(e.clientX-canvasX);
@@ -215,7 +227,7 @@ $(canvas).on('mousedown', function(e)
     editBox = !editBox;
 });
 
-//Mousemove
+// Redraws the canvas if the user is currently editing the bounds of a Label.
 $(canvas).on('mousemove', function(e) 
 {
     if(editBox) 
@@ -231,3 +243,20 @@ $(canvas).on('mousemove', function(e)
     }
 
 });
+
+////////////////////////////// Initialization //////////////////////////////
+
+function init() 
+{
+
+	$('#next-button').click(nextImage);
+	$('#prev-button').click(prevImage);
+    $('#delete-button').click(deleteImage);
+    $('#save-button').click(saveLabels);
+
+    img.addEventListener('load', loadListener, false);
+
+	updateImage(0);
+}
+
+$(init);
