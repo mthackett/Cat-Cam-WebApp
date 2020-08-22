@@ -12,11 +12,48 @@ class Label {
         this.yi = this.yf = yi;
         this.width = this.height = 0;
 
-        this.labelInput = $('<input type="text" />');
-        this.labelInput.css('position','absolute');
-        this.labelInput.css('left',this.xi);
-        this.labelInput.css('top',this.yi - 40);
-        $(canvas.parentElement).append(this.labelInput)
+        this.editButton = $('<button type="button">Edit</button>'); 
+        this.editButton.click(this, function(event) {
+            currLabel = event.data;
+            editBox = true;
+        });
+        $(canvas.parentElement).append(this.editButton);
+
+
+        this.deleteButton = $('<button type="button">Del</button>'); //glyphicon glyphicon-remove
+        this.deleteButton.click(this, function(event) {
+            // delete this label.
+            var label = event.data;
+            label.toolBar.remove();
+            var idx = 0;
+            for (var i = 0; i < labels.length; i++) {
+                if (labels[i] == label) {
+                    idx = i;
+                    break;
+                }
+            }
+            labels.splice(i,1);
+            updateCanvas();
+        });
+
+        this.dropDown = $('<select></select>');
+        for (var className in classLookup) {
+            var optionTag = '<option value="' + classLookup[className] + '">' + className + '</option>';
+            this.dropDown.append(optionTag);
+
+        }
+
+
+        this.toolBar = $('<div class="toolbar"></div>');
+        this.toolBar.css('position','absolute');
+        this.toolBar.css('left',this.xi);
+        this.toolBar.css('top',this.yi - 40);
+        $(this.toolBar).append(this.dropDown);
+        $(this.toolBar).append(this.editButton);
+        $(this.toolBar).append(this.deleteButton);
+
+        $(canvas.parentElement).append(this.toolBar);
+
     }
 
     draw(ctx) {
@@ -40,8 +77,8 @@ class Label {
         this.labelX = (this.xi + this.xf) / (2 * img.width);
         this.labelY = (this.yi + this.yf) / (2 * img.height);
 
-        this.labelInput.css('left',leftX);
-        this.labelInput.css('top',topY - 40);
+        this.toolBar.css('left',leftX);
+        this.toolBar.css('top',topY - 40);
     }
     
     /**
@@ -52,7 +89,7 @@ class Label {
         return {
             "labelX": this.labelX,
             "labelY": this.labelY,
-            "labelText": this.labelInput.val(),
+            "labelIndex": this.dropDown.val(),    // TODO: send class index instead of classname. use dropdown.
             "labelWidth": Math.abs(this.labelWidth),
             "labelHeight": Math.abs(this.labelHeight)
         }
@@ -123,7 +160,7 @@ function updateImage(idx, useCached=false)
 function getClasses() 
 {
     $.get(apiBaseUrl + '?getclasses', function(response) {
-            for (keyValPair of JSON.parse(response)) {
+            for (keyValPair of response) {
                 classLookup[keyValPair['class']] = keyValPair['index'];
             }
 
@@ -134,7 +171,7 @@ function deleteAllLabels() {
 
     for (label of labels) {
  
-        label.labelInput.remove();
+        label.toolBar.remove();
     }
     labels = [];
     ctx.drawImage(img,0,0);
@@ -212,24 +249,47 @@ function saveLabels()
     });
 }
 
+function updateCanvas() 
+{
+    ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
+    ctx.drawImage(img,0,0);
+    for (label of labels) {
+        label.draw(ctx);
+    }
+}
+
 ////////////////////////////// Canvas Drawing //////////////////////////////
 
 // Handles the creation/finalization of Label objects
 $(canvas).on('mousedown', function(e) 
 {
-    x = parseInt(e.clientX-canvasX);
-    y = parseInt(e.clientY-canvasY);
-    if (editBox == false) {
-        currLabel = new Label(canvas, imgMetadata['curr']['idx'], x, y);
-        labels.push(currLabel);
+    switch (e.which) {
+        case 1:
+            x = parseInt(e.clientX-canvasX);
+            y = parseInt(e.clientY-canvasY);
+            if (editBox == false) {
+                currLabel = new Label(canvas, imgMetadata['curr']['idx'], x, y);
+                labels.push(currLabel);
+            }
+            else {
+                //give label xf and yf.
+                currLabel.xf = x;
+                currLabel.yf = y;
+                currLabel.calculateCoords();
+            }
+            break;
+
+        case 2:
+            //middle click
+            break;
+        
+        case 3:
+            //right click
+            
+            break;
 
     }
-    else {
-        //give label xf and yf.
-        currLabel.xf = x;
-        currLabel.yf = y;
-        currLabel.calculateCoords();
-    }
+    
     editBox = !editBox;
 });
 
@@ -242,11 +302,7 @@ $(canvas).on('mousemove', function(e)
         currLabel.yf = parseInt(e.clientY-canvasY);
         currLabel.calculateCoords();
 
-        ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
-        ctx.drawImage(img,0,0);
-        for (label of labels) {
-            label.draw(ctx);
-        }
+        updateCanvas();
         
     }
 
@@ -262,9 +318,11 @@ function init()
     $('#delete-button').click(deleteImage);
     $('#save-button').click(saveLabels);
 
+    getClasses()
     img.addEventListener('load', loadListener, false);
 
 	updateImage(0);
 }
+
 
 $(init);
