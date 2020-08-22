@@ -29,13 +29,19 @@ class Label {
     }
 
     calculateCoords() {
-        this.width = Math.abs(this.xf-this.xi);
-        this.height = Math.abs(this.yf-this.yi);
+        var leftX = Math.min(this.xi, this.xf);
+        var topY = Math.min(this.yi, this.yf);
+
+        this.width = this.xf-this.xi;
+        this.height = this.yf-this.yi;
 
         this.labelWidth = this.width / img.width;
         this.labelHeight = this.height / img.height;
         this.labelX = (this.xi + this.xf) / (2 * img.width);
         this.labelY = (this.yi + this.yf) / (2 * img.height);
+
+        this.labelInput.css('left',leftX);
+        this.labelInput.css('top',topY - 40);
     }
     
     /**
@@ -47,8 +53,8 @@ class Label {
             "labelX": this.labelX,
             "labelY": this.labelY,
             "labelText": this.labelInput.val(),
-            "labelWidth": this.labelWidth,
-            "labelHeight": this.labelHeight
+            "labelWidth": Math.abs(this.labelWidth),
+            "labelHeight": Math.abs(this.labelHeight)
         }
 
     }
@@ -234,6 +240,8 @@ $(canvas).on('mousemove', function(e)
     {
         currLabel.xf = parseInt(e.clientX-canvasX);
         currLabel.yf = parseInt(e.clientY-canvasY);
+        currLabel.calculateCoords();
+
         ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
         ctx.drawImage(img,0,0);
         for (label of labels) {
