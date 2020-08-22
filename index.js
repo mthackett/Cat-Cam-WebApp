@@ -72,6 +72,8 @@ class Label {
         this.width = this.xf-this.xi;
         this.height = this.yf-this.yi;
 
+        var img = imgCache[imgMetadata['curr']['idx']];
+
         this.labelWidth = this.width / img.width;
         this.labelHeight = this.height / img.height;
         this.labelX = (this.xi + this.xf) / (2 * img.width);
@@ -89,7 +91,7 @@ class Label {
         return {
             "labelX": this.labelX,
             "labelY": this.labelY,
-            "labelIndex": this.dropDown.val(),    // TODO: send class index instead of classname. use dropdown.
+            "labelIndex": this.dropDown.val(), 
             "labelWidth": Math.abs(this.labelWidth),
             "labelHeight": Math.abs(this.labelHeight)
         }
@@ -258,16 +260,13 @@ function saveLabels()
         url: apiBaseUrl,
         contentType: "application/json",
         data: JSON.stringify(payload)
-    }).done(function(){
-        nextImage();
-        prevImg = null; 
-    });
+    }).done(nextImage);
 }
 
 function updateCanvas() 
 {
     ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
-    ctx.drawImage(img,0,0);
+    ctx.drawImage(imgCache[imgMetadata['curr']['idx']],0,0);
     for (label of labels) {
         label.draw(ctx);
     }
@@ -333,6 +332,7 @@ function init()
     $('#delete-button').click(deleteImage);
     $('#save-button').click(saveLabels);
 
+    getClasses();
 	updateImage(0);
 }
 
