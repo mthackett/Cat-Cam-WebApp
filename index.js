@@ -366,12 +366,15 @@ function init()
         };
 
 
-        $.post('https://catcam.auth.us-west-2.amazoncognito.com/oauth2/token', awsParams, function(response) {
+        $.post('https://catcam.auth.us-west-2.amazoncognito.com/oauth2/token', awsParams, function(response) 
+        {
 
             $.ajaxSetup({'headers' : {'Authorization': response.id_token}});
 
-            $('#login-button').html('Logged In').prop('disabled', true);
+            $('#login-button').replaceWith('<button type="button" class="btn btn-block btn-secondary" disabled>Logged In</button>');
 
+            getClasses();
+            updateImage(0);
         });
     }
 
@@ -381,9 +384,6 @@ function init()
     $('#save-button').click(saveLabels);
     
     window.addEventListener('resize', updateCanvas);
-
-    getClasses();
-	updateImage(0);
 }
 
 
