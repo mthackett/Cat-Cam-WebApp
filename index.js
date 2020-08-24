@@ -141,17 +141,17 @@ function loadListener(event = null)
     }
 }
 
-function cacheImage(img, idx)
-{
-    imgCache[idx] = img.cloneNode();
-}
-
 function loadAndCacheImage(metadata)
 {
     imgCache[metadata['idx']] = new Image();
     imgCache[metadata['idx']].attributes['idx'] = metadata['idx'];
-    imgCache[metadata['idx']].addEventListener('load', loadListener)
-    imgCache[metadata['idx']].src = apiBaseUrl + '?getimg&key=' + metadata['key'];
+    imgCache[metadata['idx']].addEventListener('load', loadListener);
+
+    fetch(apiBaseUrl + '?getimg&key=' + metadata['key'], { headers: { 'Authorization': $.ajaxSettings.headers.Authorization } })
+    .then(res => res.blob())
+    .then(blob => {
+        imgCache[metadata['idx']].src = URL.createObjectURL(blob);
+    });
 }
 
 /**
