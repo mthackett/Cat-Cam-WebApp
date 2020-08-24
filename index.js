@@ -264,13 +264,32 @@ function saveLabels()
     }).done(nextImage);
 }
 
-function updateCanvas() 
+function updateCanvas(mouseX, mouseY) 
 {
     ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
     ctx.drawImage(imgCache[imgMetadata['curr']['idx']],0,0);
-    for (label of labels) {
+
+    for (label of labels) 
+    {
         label.draw(ctx);
     }
+
+    ctx.lineWidth = 1.0;
+    ctx.setLineDash([2, 4]);
+    ctx.strokeStyle = "#CCCCCC";
+    
+    ctx.beginPath();
+
+    ctx.moveTo(0, mouseY);
+    ctx.lineTo(canvas.width, mouseY);
+
+    ctx.moveTo(mouseX, 0);
+    ctx.lineTo(mouseX, canvas.height);
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    
 }
 
 ////////////////////////////// Canvas Drawing //////////////////////////////
@@ -337,16 +356,18 @@ $(canvas).on('mousedown', function(e)
 // Redraws the canvas if the user is currently editing the bounds of a Label.
 $(canvas).on('mousemove', function(e) 
 {
+    var mouseCanvasX = clientToCanvasX(e.clientX);
+    var mouseCanvasY = clientToCanvasY(e.clientY);
+
     if(editBox) 
     {
-        currLabel.xf = clientToCanvasX(e.clientX);
-        currLabel.yf = clientToCanvasY(e.clientY);
+        currLabel.xf = mouseCanvasX;
+        currLabel.yf = mouseCanvasY;
 
         currLabel.calculateCoords();
-
-        updateCanvas();
-        
     }
+
+    updateCanvas(mouseCanvasX, mouseCanvasY);
 
 });
 
