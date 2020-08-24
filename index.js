@@ -366,7 +366,7 @@ function init()
 
         $.post('https://catcam.auth.us-west-2.amazoncognito.com/oauth2/token', awsParams, function(response) {
 
-            $.ajaxSetup({'headers' : {'authorization': response.id_token}});
+            $.ajaxSetup({'headers' : {'Authorization': response.id_token}});
 
         });
     }
