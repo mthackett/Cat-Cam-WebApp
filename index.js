@@ -103,6 +103,8 @@ class Label {
     }
 }
 
+var apiBaseUrl = 'https://cqzbiz8jyd.execute-api.us-west-2.amazonaws.com/prod';
+
 var imgCache = {};
 
 //Indices and keys for the main and cached images
@@ -367,6 +369,8 @@ function init()
         $.post('https://catcam.auth.us-west-2.amazoncognito.com/oauth2/token', awsParams, function(response) {
 
             $.ajaxSetup({'headers' : {'Authorization': response.id_token}});
+
+            $('#login-button').html('Logged In').prop('disabled', true);
 
         });
     }
