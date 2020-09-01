@@ -3,25 +3,24 @@
 	<head>
 		<meta charset="utf-8"/>
 		<title>Cat Camera Dataset Curator</title>
-
+		<link rel="icon" type="image/png"  href="./favicon.png">
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
 	</head>
 
-	<body class="container h-100">
+	<body class="container h-100 shadow">
 
 		<div class="container h-75">
 			<div class="row h-100 justify-content-center align-items-center">
 				<div class="col-lg-9">
-					<canvas id='main-canvas' class='w-100 h-100' style='cursor: crosshair;'></canvas>
+					<canvas id='main-canvas' class='w-100 h-100 bg-dark' style='cursor: crosshair;'></canvas>
 				</div>
 				<div class="col-lg">
 					<button type='button' class='btn btn-block btn-primary' id='next-button'>Next</button>
 					<button type='button' class='btn btn-block btn-primary' id='prev-button'>Previous</button>
-					<button type='button' class='btn btn-block btn-danger' id='delete-button'>Delete</button>
-					<button type='button' class='btn btn-block btn-secondary' id='night-button'>Night Mode</button>
 					<button type='button' class='btn btn-block btn-secondary' id='save-button'>Save Labels</button>
 					<a id='login-button' class='btn btn-block btn-secondary' href='https://catcam.auth.us-west-2.amazoncognito.com/login?client_id=2skls43lghre9ori0a0u7b0rcc&response_type=code&scope=aws.cognito.signin.user.admin+email+openid+phone+profile&redirect_uri=https://catcam.hackett.io'>Login</a>
+					<button type='button' class='btn btn-block btn-danger' id='delete-button'>Delete</button>
 				</div>	
 			</div>
 		</div>
