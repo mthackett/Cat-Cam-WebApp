@@ -14,8 +14,8 @@ class Label {
 
         this.editButton = $('<button type="button">Edit</button>'); 
         this.editButton.click(this, function(event) {
-            currLabel = event.data;
-            editBox = true;
+            currLabel = null;
+            editBox = false;
         });
         $(canvas.parentElement).append(this.editButton);
 
@@ -30,8 +30,8 @@ class Label {
         });
 
         this.dropDown = $('<select></select>');
-        for (var className in classLookup) {
-            var optionTag = '<option value="' + classLookup[className] + '">' + className + '</option>';
+        for (var className in api.classLookup) {
+            var optionTag = '<option value="' + api.classLookup[className] + '">' + className + '</option>';
             this.dropDown.append(optionTag);
 
         }
@@ -64,7 +64,7 @@ class Label {
         this.width = this.xf-this.xi;
         this.height = this.yf-this.yi;
 
-        var img = imgCache[imgMetadata['curr']['idx']];
+        var img = api.imgCache[api.imgMetadata['curr']['idx']];
 
         this.labelWidth = this.width / img.width;
         this.labelHeight = this.height / img.height;
@@ -103,18 +103,7 @@ class Label {
     }
 }
 
-var apiBaseUrl = 'https://cqzbiz8jyd.execute-api.us-west-2.amazonaws.com/prod';
 
-var imgCache = {};
-
-//Indices and keys for the main and cached images
-var imgMetadata = {
-    'prev': {'idx': 0, 'key': ''},
-    'curr': {'idx': 0, 'key': ''},
-    'next': {'idx': 0, 'key': ''}
-};
-
-var lockMetadata = false;
 
 //Canvas
 var canvas = document.getElementById('main-canvas');
@@ -123,93 +112,13 @@ var editBox = false;
 //Labels
 var labels = [];
 var currLabel = null;
-var classLookup = {};
 
-/**
- * Called whenever the main image finishes loading
- */
-function loadListener(event = null)
-{
-    if(event == null || event.target.attributes['idx'] == imgMetadata['curr']['idx'])
-    {
-        var img = imgCache[imgMetadata['curr']['idx']];
 
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0,0);
-        deleteAllLabels();
-    }
-}
+function loadListener() {deleteAllLabels();}
 
-function loadAndCacheImage(metadata)
-{
-    imgCache[metadata['idx']] = new Image();
-    imgCache[metadata['idx']].attributes['idx'] = metadata['idx'];
-    imgCache[metadata['idx']].addEventListener('load', loadListener);
+api.imageLoadListeners.push(loadListener);
 
-    fetch(apiBaseUrl + '?getimg&key=' + metadata['key'], { headers: { 'Authorization': $.ajaxSettings.headers.Authorization } })
-    .then(res => res.blob())
-    .then(blob => {
-        imgCache[metadata['idx']].src = URL.createObjectURL(blob);
-    });
-}
 
-/**
- * Updates imgMetadata and loads the image corresponding to the provided image index
- * 
- * @param {number} idx The index of the image to load
- */
-function updateImage(idx)
-{
-    if(lockMetadata)
-    {
-        return;
-    }
-    else
-    {
-        lockMetadata = true;
-
-        $('button').prop('disabled', true);
-    }
-
-    var cachedImg = imgCache[idx];
-    var useCached = (cachedImg != null);
-
-    $.getJSON(apiBaseUrl + '?getkey&idx=' + idx, function(response)
-    {
-        imgMetadata = response;
-
-        $('button').prop('disabled', false);
-
-        if(useCached && cachedImg.complete) loadListener();
-
-        for(var metadataKey in imgMetadata)
-        {
-            metadata = imgMetadata[metadataKey];
-
-            if((metadata['idx'] != 0) && (imgCache[metadata['idx']] == null))
-            {
-                loadAndCacheImage(metadata);
-            }
-        }
-
-        lockMetadata = false;
-    });
-}
-
-/**
- * Retrieves the available class labels from the server and
- * creates a mapping from each class name to its label index
- */
-function getClasses() 
-{
-    $.get(apiBaseUrl + '?getclasses', function(response) {
-            for (keyValPair of response) {
-                classLookup[keyValPair['class']] = keyValPair['index'];
-            }
-
-    });
-}
 
 function deleteAllLabels() {
 
@@ -218,32 +127,12 @@ function deleteAllLabels() {
         label.toolBar.remove();
     }
     labels = [];
-    ctx.drawImage(imgCache[imgMetadata['curr']['idx']],0,0);
-}
-
-function nextImage() 
-{
-    updateImage(imgMetadata['next']['idx']);
-}
-
-function prevImage() 
-{
-    updateImage(imgMetadata['prev']['idx']);
-}
-
-/**
- * Permanently deletes the currently displayed image from the database.
- */
-function deleteImage() 
-{
-    imgCache[imgMetadata['curr']['idx']] = null;
-    
-    $.get(apiBaseUrl + '?delete&key=' + imgMetadata['curr']['key'], nextImage);
+    ctx.drawImage(api.imgCache[api.imgMetadata['curr']['idx']],0,0);
 }
 
 function saveLabels() 
 {
-    imgCache[imgMetadata['curr']['idx']] = null;
+    api.imgCache[api.imgMetadata['curr']['idx']] = null;
 
     var labelData = [];
     for (label of labels) {
@@ -252,22 +141,17 @@ function saveLabels()
     var payload = 
     {
         "action": "savelabels",
-        "idx": imgMetadata['curr']['idx'],
+        "idx": api.imgMetadata['curr']['idx'],
         "labels": labelData
     };
 
-    $.ajax({
-        type: "POST",
-        url: apiBaseUrl,
-        contentType: "application/json",
-        data: JSON.stringify(payload)
-    }).done(nextImage);
+    api.postJSON(payload).done(nextImage);
 }
 
 function updateCanvas(mouseX, mouseY) 
 {
     ctx.clearRect(0,0,canvas.width,canvas.height); //clear canvas
-    ctx.drawImage(imgCache[imgMetadata['curr']['idx']],0,0);
+    ctx.drawImage(api.imgCache[api.imgMetadata['curr']['idx']],0,0);
 
     for (label of labels) 
     {
@@ -328,7 +212,11 @@ $(canvas).on('mousedown', function(e)
             var y = clientToCanvasY(e.clientY);
 
             if (editBox == false) {
-                currLabel = new Label(canvas, imgMetadata['curr']['idx'], x, y);
+                // Redraw image so older labels are not in the way.
+                ctx.clearRect(0,0,canvas.width,canvas.height); 
+                ctx.drawImage(api.imgCache[api.imgMetadata['curr']['idx']],0,0);
+
+                currLabel = new Label(canvas, api.imgMetadata['curr']['idx'], x, y);
                 labels.push(currLabel);
             }
             else {
@@ -336,6 +224,11 @@ $(canvas).on('mousedown', function(e)
                 currLabel.xf = x;
                 currLabel.yf = y;
                 currLabel.calculateCoords();
+                // Draw existing labels.
+                for (label of labels) 
+                {
+                    label.draw(ctx);
+                }
             }
             break;
 
@@ -394,14 +287,14 @@ function init()
 
             $('#login-button').replaceWith('<button type="button" class="btn btn-block btn-secondary" disabled>Logged In</button>');
 
-            getClasses();
-            updateImage(0);
+            api.getClasses();
+            api.updateImage(0);
         });
     }
 
-	$('#next-button').click(nextImage);
-	$('#prev-button').click(prevImage);
-    $('#delete-button').click(deleteImage);
+	$('#next-button').click(api.nextImage);
+	$('#prev-button').click(api.prevImage);
+    $('#delete-button').click(api.deleteImage);
     $('#save-button').click(saveLabels);
     
     window.addEventListener('resize', updateCanvas);
