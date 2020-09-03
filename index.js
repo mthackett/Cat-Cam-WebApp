@@ -145,7 +145,7 @@ function saveLabels()
         "labels": labelData
     };
 
-    api.postJSON(payload).done(nextImage);
+    api.postJSON(payload).done(api.nextImage);
 }
 
 function updateCanvas(mouseX, mouseY) 
